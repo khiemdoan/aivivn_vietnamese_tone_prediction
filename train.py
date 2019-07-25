@@ -29,16 +29,15 @@ input_lang = Lang('No-tone Vietnamese')
 output_lang = Lang('Toned Vietnamese')
 
 print('Read data...')
-# with open('data/vietnamese_tone_prediction.zip', 'rb') as infile:
-#     with ZipFile(infile) as inzip:
-#         lines = inzip.read('train.txt').decode('utf-8').split('\n')
-
-with open('data/mini_train.txt', 'r', encoding='utf-8') as infile:
-    lines = infile.read().split('\n')
+with open('data/vietnamese_tone_prediction.zip', 'rb') as infile:
+    with ZipFile(infile) as inzip:
+        lines = inzip.read('train.txt').decode('utf-8').split('\n')
 
 lines = itertools.chain.from_iterable(extract_phrases(line) for line in lines)
 lines = [line for line in lines if len(line.split(' ')) < MAX_LENGTH - 2]
 lines = [line.lower() for line in lines]
+
+print('Total sentences:', len(lines))
 
 pairs = [(remove_vietnamese_tone(line), line) for line in lines]
 
@@ -51,8 +50,8 @@ print('{}: {} words'.format(output_lang.name, output_lang.n_words))
 
 
 def tensors_from_pair(pair):
-    input_tensor = input_lang.sentence2tensor(pair[0])
-    target_tensor = output_lang.sentence2tensor(pair[1])
+    input_tensor = input_lang.sentence2tensor(pair[0]).to(device)
+    target_tensor = output_lang.sentence2tensor(pair[1]).to(device)
     return input_tensor, target_tensor
 
 
