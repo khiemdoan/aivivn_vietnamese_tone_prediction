@@ -1,5 +1,6 @@
 jupyter
-tensorflow
-keras
-pandas
-numpy
+torch
+scikit-learn
+tqdm
+isort
+
