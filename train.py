@@ -35,12 +35,9 @@ input_lang = Lang('No-tone Vietnamese')
 target_lang = Lang('Toned Vietnamese')
 
 print('Read data...')
-# with open('data/vietnamese_tone_prediction.zip', 'rb') as infile:
-#     with ZipFile(infile) as inzip:
-#         lines = inzip.read('train.txt').decode('utf-8').split('\n')
-
-with open('data/mini_train.txt', 'r', encoding='utf-8') as infile:
-    lines = infile.read().split('\n')
+with open('data/vietnamese_tone_prediction.zip', 'rb') as infile:
+    with ZipFile(infile) as inzip:
+        lines = inzip.read('train.txt').decode('utf-8').split('\n')
 
 print('Preprocess...')
 lines = itertools.chain.from_iterable(extract_phrases(line) for line in lines)
