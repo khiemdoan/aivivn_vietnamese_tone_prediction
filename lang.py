@@ -1,3 +1,5 @@
+from typing import Dict, List
+
 import torch
 
 from utils import device
@@ -10,11 +12,10 @@ Unknown_token = '<UNKNOWN>'
 
 class Lang:
 
-    def __init__(self, name):
+    def __init__(self, name: str) -> None:
         self.name = name
-        self.word2index = {}
-        self.index2word = {}
-        self.n_words = 0
+        self.word2index: Dict[str, int] = {}
+        self.index2word: Dict[int, str] = {}
 
         self.add_char(SOS_token)
         self.add_char(EOS_token)
@@ -26,44 +27,42 @@ class Lang:
     def __repr__(self):
         return self.name
 
-    def add_sentence(self, sentence):
+    def add_sentence(self, sentence: str) -> None:
         for word in sentence.split(' '):
             if is_vietnamese_word(word):
                 self.add_char(word)
             else:
                 self.add_char(Unknown_token)
 
-    def add_char(self, char):
+    def add_char(self, char: str) -> None:
         if char not in self.word2index:
-            self.word2index[char] = self.n_words
-            self.index2word[self.n_words] = char
-            self.n_words += 1
+            next_index = self.n_words
+            self.word2index[char] = next_index
+            self.index2word[next_index] = char
 
-    def sentence2indexes(self, sentence):
+    @property
+    def n_words(self) -> int:
+        return len(self.word2index)
+
+    def sentence2indexes(self, sentence: str) -> List[int]:
         indexes = [self.word2index[SOS_token]]
         for word in sentence.split(' '):
-            if is_vietnamese_word(word):
-                indexes.append(self.word2index.get(word, self.word2index[Unknown_token]))
-            else:
-                indexes.append(self.word2index[Unknown_token])
+            index = self.word2index.get(word, self.word2index[Unknown_token])
+            indexes.append(index)
         indexes.append(self.word2index[EOS_token])
         return indexes
 
-    def indexes2sentence(self, indexes):
+    def indexes2sentence(self, indexes: List[int]) -> List[str]:
         chars = []
         for index in indexes:
-            char = self.index2word.get(index, self.index2word[2])
-            if char == SOS_token:
-                continue
-            if char == EOS_token:
-                continue
+            char = self.index2word.get(index, Unknown_token)
             chars.append(char)
         return chars
 
-    def sentence2tensor(self, sentence):
+    def sentence2tensor(self, sentence: str) -> torch.tensor:
         indexes = self.sentence2indexes(sentence)
-        return torch.tensor(indexes, dtype=torch.long, device=device).view(-1, 1)
+        return torch.tensor(indexes, dtype=torch.long, device=device)
 
-    def tensor2sentence(self, tensor):
-        indexes = tensor.view(1, -1)[0].tolist()
+    def tensor2sentence(self, tensor: torch.tensor) -> List[str]:
+        indexes = tensor.tolist()
         return self.indexes2sentence(indexes)
