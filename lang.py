@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict, List, NoReturn
 
 import torch
 
@@ -12,7 +12,7 @@ Unknown_token = '<UNKNOWN>'
 
 class Lang:
 
-    def __init__(self, name: str) -> None:
+    def __init__(self, name: str) -> NoReturn:
         self.name = name
         self.word2index: Dict[str, int] = {}
         self.index2word: Dict[int, str] = {}
@@ -27,14 +27,14 @@ class Lang:
     def __repr__(self):
         return self.name
 
-    def add_sentence(self, sentence: str) -> None:
+    def add_sentence(self, sentence: str) -> NoReturn:
         for word in sentence.split(' '):
             if is_vietnamese_word(word):
                 self.add_char(word)
             else:
                 self.add_char(Unknown_token)
 
-    def add_char(self, char: str) -> None:
+    def add_char(self, char: str) -> NoReturn:
         if char not in self.word2index:
             next_index = self.n_words
             self.word2index[char] = next_index

@@ -2,20 +2,20 @@ import gc
 import itertools
 import platform
 import random
-import re
 import sys
 from zipfile import ZipFile
 
 import torch
+from IPython.display import display
+from progressbar import progressbar
 from sklearn.model_selection import train_test_split
 from torch import nn, optim
 from torch.nn import functional as F
-from torch.utils.data import DataLoader, Dataset
-from tqdm import tqdm_notebook as tqdm
+from torch.utils.data import DataLoader
 
 from lang import EOS_token, Lang, SOS_token
-from model import DecoderRNN, EncoderRNN
-from utils import device, save_model
+from model import DecoderRNN, EncoderRNN, SentenceDataSet
+from utils import device, extract_phrases, pickle_dump, save_model
 from vietnamese_utils import remove_vietnamese_tone
 
 print(f'Python version: {platform.python_version()}')
@@ -31,23 +31,16 @@ EPOCHS = 1000
 if 'google.colab' not in sys.modules:
     BATCH_SIZE = 128
 
-
-def extract_phrases(text):
-    return re.findall(r'\w[\w ]+', text)
-
-
 input_lang = Lang('No-tone Vietnamese')
 target_lang = Lang('Toned Vietnamese')
 
-print('Read data...')
-# with open('data/vietnamese_tone_prediction.zip', 'rb') as infile:
-#     with ZipFile(infile) as inzip:
-#         lines = inzip.read('train.txt').decode('utf-8').split('\n')
+print('Read data...\n')
+with open('data/vietnamese_tone_prediction.zip', 'rb') as infile:
+    with ZipFile(infile) as inzip:
+        lines = inzip.read('train.txt').decode('utf-8').split('\n')
+        lines = lines[:1_000_000]
 
-with open('data/mini_train.txt', 'r', encoding='utf-8') as infile:
-    lines = infile.read().split('\n')
-
-print('Preprocess...')
+print('Preprocess...\n')
 lines = itertools.chain.from_iterable(extract_phrases(line) for line in lines)
 lines = [line for line in lines if len(line.split(' ')) < MAX_LENGTH - 2]
 lines = [line.lower() for line in lines]
@@ -63,6 +56,8 @@ for src, dest in pairs:
 print(f'{input_lang.name}: {input_lang.n_words} words')
 print(f'{target_lang.name}: {target_lang.n_words} words')
 
+pickle_dump(input_lang, 'data/input_lang.pickle')
+pickle_dump(target_lang, 'data/target_lang.pickle')
 
 def tensors_from_pair(pair):
     input_tensor = input_lang.sentence2tensor(pair[0]).to(device)
@@ -74,19 +69,8 @@ def tensors_from_pair(pair):
     return input_tensor, target_tensor
 
 
-class SentenceDataSet(Dataset):
-
-    def __init__(self, pairs):
-        self.pairs = pairs
-
-    def __len__(self):
-        return len(self.pairs)
-
-    def __getitem__(self, idx):
-        return self.pairs[idx]
-
-
-pairs = [tensors_from_pair(pair) for pair in tqdm(pairs, 'Conv data')]
+print('Conv data')
+pairs = [tensors_from_pair(pair) for pair in progressbar(pairs)]
 training_pairs, validation_pairs = train_test_split(pairs, test_size=0.2)
 
 training_dataset = SentenceDataSet(training_pairs)
@@ -95,6 +79,7 @@ training_loader = DataLoader(training_dataset, batch_size=BATCH_SIZE, shuffle=Tr
 validation_dataset = SentenceDataSet(validation_pairs)
 validation_loader = DataLoader(validation_dataset, batch_size=BATCH_SIZE, shuffle=False)
 
+print()
 print(f'Total trains: {len(training_pairs)}')
 print(f'Total validations: {len(validation_pairs)}')
 del pairs, training_pairs, training_dataset, validation_pairs, validation_dataset
@@ -193,41 +178,45 @@ def calc_accurate(input_tensor, target_tensor, encoder, decoder):
 encoder = EncoderRNN(input_lang.n_words, HIDDEN_SIZE).to(device)
 decoder = DecoderRNN(HIDDEN_SIZE, target_lang.n_words).to(device)
 
-print('Train...')
 encoder_optimizer = optim.SGD(encoder.parameters(), lr=LEARNING_RATE)
 decoder_optimizer = optim.SGD(decoder.parameters(), lr=LEARNING_RATE)
 criterion = nn.NLLLoss()
 
-best_loss = float('inf')
 best_accurate = 0
 
+print('\nTrain...')
+current_epoch = display('Epoch status', display_id=True)
+train_status = display('Training status', display_id=True)
+validation_status = display('Training status', display_id=True)
+epoch_result = display('Result status', display_id=True)
+save_result = display('Saving status', display_id=True)
+
 for epoch in range(EPOCHS):
+    current_epoch.update(f'Epoch {epoch + 1}...')
     gc.collect()
 
     total_loss = 0
-    total_accurate = 0
-    total_iterations = 0
-
-    desc = f'Train {epoch + 1}'
-    for it, (input_tensor, target_tensor) in enumerate(tqdm(training_loader, desc), 1):
+    total_iterations = len(training_loader)
+    for it, (input_tensor, target_tensor) in enumerate(training_loader, 1):
+        train_status.update(f'Train: {it} / {total_iterations}')
         loss = train(input_tensor, target_tensor,
                      encoder, decoder,
                      encoder_optimizer, decoder_optimizer,
                      criterion)
         total_loss += loss
-        total_iterations = it
-    avg_loss = total_loss / total_iterations
+    avg_loss = total_loss / total_iterations if total_iterations else float('inf')
 
+    total_accurate = 0
+    total_iterations = len(validation_loader)
     with torch.no_grad():
-        desc = f'Valid {epoch + 1}'
-        for it, (input_tensor, target_tensor) in enumerate(tqdm(validation_loader, desc), 1):
+        for it, (input_tensor, target_tensor) in enumerate(validation_loader, 1):
+            validation_status.update(f'Validation: {it} / {total_iterations}')
             total_accurate += calc_accurate(input_tensor, target_tensor, encoder, decoder)
-            total_iterations = it
-    avg_accurate = total_accurate / total_iterations
+    avg_accurate = total_accurate / total_iterations if total_iterations else 0
 
-    print(f'Epoch {epoch + 1}: Loss: {avg_loss}, accurate: {avg_accurate}')
+    epoch_result.update(f'Epoch {epoch + 1}: Loss: {avg_loss}, accurate: {avg_accurate}')
 
     if avg_accurate > best_accurate:
         best_accurate = avg_accurate
-        print('Save to file...')
+        save_result.update(f'Save epoch {epoch + 1}: Loss: {avg_loss}, accurate: {avg_accurate}')
         save_model(encoder, decoder, avg_accurate, avg_loss)

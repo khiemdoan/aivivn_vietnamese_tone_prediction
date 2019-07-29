@@ -42,7 +42,7 @@ tones_dict = dict(zip(uni_chars_l + uni_chars_u, tones_l + tones_u))
 no_tone_dict = dict(zip(uni_chars_l + uni_chars_u, no_tone_chars_l + no_tone_chars_u))
 
 
-def decompose_predicted(text):
+def decompose_predicted(text: str) -> str:
     text = [c for c in text if c in tones_dict]
     if len(text) == 0:
         return '0'
@@ -50,17 +50,17 @@ def decompose_predicted(text):
     return ''.join(text)
 
 
-def remove_vietnamese_tone(text):
+def remove_vietnamese_tone(text: str) -> str:
     text = [no_tone_dict.get(c, c) for c in text]
     return ''.join(text)
 
 
-def is_vietnamese_word(word):
+def is_vietnamese_word(word: str) -> bool:
     word = remove_vietnamese_tone(word)
     word = word.lower()
     pattern = r'^[bcdghklmnpqrstvx]{0,3}[aeiouy]{1,3}[bcdghklmnpqrstvx]{0,2}$'
     return bool(re.match(pattern, word))
 
 
-def get_vietnamese_alphabet():
+def get_vietnamese_alphabet() -> str:
     return string.ascii_lowercase + tones_l
