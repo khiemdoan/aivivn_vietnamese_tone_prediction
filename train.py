@@ -98,11 +98,13 @@ def train(input_tensor, target_tensor, encoder, decoder, encoder_optimizer, deco
     batch_size = input_tensor.size(1)
 
     encoder_hidden = encoder.init_hidden(batch_size)
+    encoder_outputs = torch.zeros(input_length, encoder.hidden_size, device=device)
 
     loss = 0
 
     for ei in range(input_length):
         encoder_output, encoder_hidden = encoder(input_tensor[ei], encoder_hidden)
+        encoder_outputs[ei] = encoder_output[0, 0]
 
     decoder_input = target_tensor[0]
     decoder_hidden = encoder_hidden
@@ -111,7 +113,7 @@ def train(input_tensor, target_tensor, encoder, decoder, encoder_optimizer, deco
 
     for di in range(1, target_length):
         target_output = target_tensor[di]
-        decoder_output, decoder_hidden = decoder(decoder_input, decoder_hidden)
+        decoder_output, decoder_hidden, decoder_attention = decoder(decoder_input, decoder_hidden, encoder_outputs)
 
         if use_teacher_forcing:
             # Teacher forcing: Feed the target as the next input
@@ -141,9 +143,11 @@ def calc_accurate(input_tensor, target_tensor, encoder, decoder):
     batch_size = input_tensor.size(1)
 
     encoder_hidden = encoder.init_hidden(batch_size)
+    encoder_outputs = torch.zeros(input_length, encoder.hidden_size, device=device)
 
     for ei in range(input_length):
         encoder_output, encoder_hidden = encoder(input_tensor[ei], encoder_hidden)
+        encoder_outputs[ei] = encoder_output[0, 0]
 
     decoder_input = target_tensor[:, 0]
     decoder_hidden = encoder_hidden
@@ -152,7 +156,7 @@ def calc_accurate(input_tensor, target_tensor, encoder, decoder):
     output[0] = decoder_input
 
     for di in range(1, target_length):
-        decoder_output, decoder_hidden = decoder(decoder_input, decoder_hidden)
+        decoder_output, decoder_hidden, decoder_attention = decoder(decoder_input, decoder_hidden, encoder_outputs)
         topv, topi = decoder_output.topk(1, dim=1)
         decoder_input = topi.detach().transpose(1, 0)[0]
         output[di] = decoder_input
@@ -176,7 +180,7 @@ def calc_accurate(input_tensor, target_tensor, encoder, decoder):
 
 
 encoder = EncoderRNN(input_lang.n_words, HIDDEN_SIZE).to(device)
-decoder = DecoderRNN(HIDDEN_SIZE, target_lang.n_words).to(device)
+decoder = DecoderRNN(HIDDEN_SIZE, target_lang.n_words, MAX_LENGTH).to(device)
 
 encoder_optimizer = optim.SGD(encoder.parameters(), lr=LEARNING_RATE)
 decoder_optimizer = optim.SGD(decoder.parameters(), lr=LEARNING_RATE)
