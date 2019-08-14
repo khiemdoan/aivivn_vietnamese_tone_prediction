@@ -2,11 +2,11 @@ import gc
 import itertools
 import platform
 import random
+import string
 import sys
 from zipfile import ZipFile
 
 import torch
-from IPython.display import display
 from progressbar import progressbar
 from sklearn.model_selection import train_test_split
 from torch import nn, optim
@@ -15,8 +15,8 @@ from torch.utils.data import DataLoader
 
 from lang import EOS_token, Lang, SOS_token
 from model import DecoderRNN, EncoderRNN, SentenceDataSet
-from utils import device, extract_phrases, pickle_dump, save_model
-from vietnamese_utils import remove_vietnamese_tone
+from utils import device, extract_phrases, get_display, pickle_dump, save_model
+from vietnamese_utils import remove_vietnamese_tone, uni_chars_l
 
 print(f'Python version: {platform.python_version()}')
 print(f'Pytorch version: {torch.__version__}\n')
@@ -31,14 +31,19 @@ EPOCHS = 1000
 if 'google.colab' not in sys.modules:
     BATCH_SIZE = 128
 
+input_vocab = ' ' + string.ascii_lowercase
+target_vocab = input_vocab + uni_chars_l
+
 input_lang = Lang('No-tone Vietnamese')
 target_lang = Lang('Toned Vietnamese')
 
+input_lang.add_sentence(input_vocab)
+target_lang.add_sentence(target_vocab)
+
 print('Read data...\n')
-with open('data/vietnamese_tone_prediction.zip', 'rb') as infile:
-    with ZipFile(infile) as inzip:
-        lines = inzip.read('train.txt').decode('utf-8').split('\n')
-        lines = lines[:1_000_000]
+with ZipFile('data/vietnamese_tone_prediction.zip', 'r') as inzip:
+    lines = inzip.read('train.txt').decode('utf-8').split('\n')
+    lines = lines[:1_000]
 
 print('Preprocess...\n')
 lines = itertools.chain.from_iterable(extract_phrases(line) for line in lines)
@@ -49,24 +54,22 @@ del lines
 
 print('Total sentences:', len(pairs))
 
-for src, dest in pairs:
-    input_lang.add_sentence(src)
-    target_lang.add_sentence(dest)
-
 print(f'{input_lang.name}: {input_lang.n_words} words')
 print(f'{target_lang.name}: {target_lang.n_words} words')
 
 pickle_dump(input_lang, 'data/input_lang.pickle')
 pickle_dump(target_lang, 'data/target_lang.pickle')
 
+
 def tensors_from_pair(pair):
     input_tensor = input_lang.sentence2tensor(pair[0]).to(device)
     input_tensor = F.pad(input_tensor, [0, MAX_LENGTH - input_tensor.size(0)],
-                         'constant', input_lang.word2index[EOS_token])
+                         'constant', input_lang.char2index[EOS_token])
     target_tensor = target_lang.sentence2tensor(pair[1]).to(device)
     target_tensor = F.pad(target_tensor, [0, MAX_LENGTH - target_tensor.size(0)],
-                          'constant', target_lang.word2index[EOS_token])
+                          'constant', target_lang.char2index[EOS_token])
     return input_tensor, target_tensor
+
 
 
 print('Conv data')
@@ -169,7 +172,7 @@ def calc_accurate(input_tensor, target_tensor, encoder, decoder):
         # print(target_lang.tensor2sentence(output[:, bi]))
 
         for wi in range(target_length):
-            if output[wi][bi] == target_lang.word2index[EOS_token]:
+            if output[wi][bi] == target_lang.char2index[EOS_token]:
                 break
 
             total += 1
@@ -189,11 +192,11 @@ criterion = nn.NLLLoss()
 best_accurate = 0
 
 print('\nTrain...')
-current_epoch = display('Epoch status', display_id=True)
-train_status = display('Training status', display_id=True)
-validation_status = display('Training status', display_id=True)
-epoch_result = display('Result status', display_id=True)
-save_result = display('Saving status', display_id=True)
+current_epoch = get_display('Epoch status')
+train_status = get_display('Training status')
+validation_status = get_display('Training status')
+epoch_result = get_display('Result status')
+save_result = get_display('Saving status')
 
 for epoch in range(EPOCHS):
     current_epoch.update(f'Epoch {epoch + 1}...')

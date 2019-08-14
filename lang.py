@@ -3,7 +3,6 @@ from typing import Dict, List, NoReturn
 import torch
 
 from utils import device
-from vietnamese_utils import is_vietnamese_word
 
 SOS_token = '<SOS>'
 EOS_token = '<EOS>'
@@ -14,8 +13,8 @@ class Lang:
 
     def __init__(self, name: str) -> NoReturn:
         self.name = name
-        self.word2index: Dict[str, int] = {}
-        self.index2word: Dict[int, str] = {}
+        self.char2index: Dict[str, int] = {}
+        self.index2char: Dict[int, str] = {}
 
         self.add_char(SOS_token)
         self.add_char(EOS_token)
@@ -28,34 +27,31 @@ class Lang:
         return self.name
 
     def add_sentence(self, sentence: str) -> NoReturn:
-        for word in sentence.split(' '):
-            if is_vietnamese_word(word):
-                self.add_char(word)
-            else:
-                self.add_char(Unknown_token)
+        for char in sentence:
+            self.add_char(char)
 
     def add_char(self, char: str) -> NoReturn:
-        if char not in self.word2index:
+        if char not in self.char2index:
             next_index = self.n_words
-            self.word2index[char] = next_index
-            self.index2word[next_index] = char
+            self.char2index[char] = next_index
+            self.index2char[next_index] = char
 
     @property
     def n_words(self) -> int:
-        return len(self.word2index)
+        return len(self.char2index)
 
     def sentence2indexes(self, sentence: str) -> List[int]:
-        indexes = [self.word2index[SOS_token]]
-        for word in sentence.split(' '):
-            index = self.word2index.get(word, self.word2index[Unknown_token])
+        indexes = [self.char2index[SOS_token]]
+        for char in sentence:
+            index = self.char2index.get(char, self.char2index[Unknown_token])
             indexes.append(index)
-        indexes.append(self.word2index[EOS_token])
+        indexes.append(self.char2index[EOS_token])
         return indexes
 
     def indexes2sentence(self, indexes: List[int]) -> List[str]:
         chars = []
         for index in indexes:
-            char = self.index2word.get(index, Unknown_token)
+            char = self.index2char.get(index, Unknown_token)
             chars.append(char)
         return chars
 

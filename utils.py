@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import List, NoReturn, Tuple
 
 import torch
+from IPython.display import display
 from torch.nn import Module
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -45,3 +46,16 @@ def pickle_dump(obj, file_path):
 def pickle_load(file_path):
     with open(file_path, 'rb') as infile:
         return pickle.load(infile)
+
+
+def get_display(name: str):
+    class Display:
+        def __init__(self):
+            self.name = name
+
+        def update(self, content):
+            print(f'{self.name}: {content}')
+
+    display_obj = display(name, display_id=True)
+    if not display_obj:
+        return Display()
