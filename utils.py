@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import List, NoReturn, Tuple
 
 import torch
-from IPython.display import display
+from IPython.display import display, HTML
 from torch.nn import Module
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -56,6 +56,7 @@ def get_display(name: str):
         def update(self, content):
             print(f'{self.name}: {content}')
 
-    display_obj = display(name, display_id=True)
+    display_obj = display(HTML(name), display_id=True)
     if not display_obj:
-        return Display()
+        display_obj = Display()
+    return display_obj
