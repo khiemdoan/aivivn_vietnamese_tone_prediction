@@ -4,33 +4,39 @@ from pathlib import Path
 from typing import List, NoReturn, Tuple
 
 import torch
-from IPython.display import display, HTML
+from IPython.display import HTML, display
 from torch.nn import Module
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 model_dir = Path('./models')
 
 
-def save_model(encoder: Module, decoder: Module, accurate: float, loss: float) -> NoReturn:
+def save_model(epoch: int, loss: float, voc_dict, embedding, en, de, en_opt, de_opt) -> NoReturn:
     model_dir.mkdir(parents=True, exist_ok=True)
-    model_file = model_dir / 'accurate_{:.5f}_loss_{:.5f}.pt'.format(accurate, loss)
+    model_file = model_dir / f'epoch_{epoch}_loss_{loss:.5f}.pt'
     torch.save({
-        'encoder': encoder,
-        'decoder': decoder,
-        'accurate': accurate,
+        'epoch': epoch,
         'loss': loss,
+        'voc_dict': voc_dict,
+        'embedding': embedding,
+        'encoder': en,
+        'decoder': de,
+        'en_opt': en_opt,
+        'de_opt': de_opt,
     }, model_file)
 
 
-def load_model(accurate: float, loss: float) -> Tuple[Module, Module, float, float]:
-    model_file = model_dir / 'accurate_{:.5f}_loss_{:.5f}.pt'.format(accurate, loss)
+def load_model(epoch: int):
+    model_file = model_dir / 'epoch_{:.5f}.pt'.format(epoch)
     return load_model_file(model_file)
 
 
-def load_model_file(file_path) -> Tuple[Module, Module, float, float]:
+def load_model_file(file_path):
     checkpoint = torch.load(file_path)
-    return checkpoint['encoder'].to(device), checkpoint['decoder'].to(device),\
-           checkpoint['accurate'], checkpoint['loss']
+    return checkpoint['epoch'], checkpoint['loss'],\
+           checkpoint['voc_dict'], checkpoint['embedding'],\
+           checkpoint['encoder'], checkpoint['decoder'],\
+           checkpoint['en_opt'], checkpoint['de_opt'],
 
 
 def extract_phrases(text) -> List[str]:
