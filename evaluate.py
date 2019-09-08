@@ -7,7 +7,7 @@ from lang import EOS_token, PAD_token, SOS_token, Voc
 from model import EncoderRNN, GreedySearchDecoder, LuongAttnDecoderRNN
 from utils import device
 
-voc = Voc('hihi')
+voc = Voc()
 
 attn_model = 'dot'
 # attn_model = 'general'
@@ -20,7 +20,7 @@ batch_size = 100
 learning_rate = 0.0001
 decoder_learning_ratio = 5.0
 
-loadFilename = 'models/save/500/checkpoint.tar'
+loadFilename = 'models/checkpoint.tar'
 checkpoint = torch.load(loadFilename)
 
 voc.__dict__ = checkpoint['voc_dict']
@@ -63,7 +63,7 @@ def normalizeString(s):
 
 
 def indexesFromSentence(voc, sentence):
-    return [voc.word2index[word] for word in sentence.split(' ')] + [EOS_token]
+    return [voc.word2index[word] for word in sentence] + [EOS_token]
 
 
 def evaluate(encoder, decoder, searcher, voc, sentence, max_length=MAX_LENGTH):
@@ -78,6 +78,7 @@ def evaluate(encoder, decoder, searcher, voc, sentence, max_length=MAX_LENGTH):
     input_batch = input_batch.to(device)
     lengths = lengths.to(device)
     # Decode sentence with searcher
+    max_length = len(sentence)
     tokens, scores = searcher(input_batch, lengths, max_length)
     # indexes -> words
     decoded_words = [voc.index2word[token.item()] for token in tokens]
@@ -98,7 +99,7 @@ def evaluateInput(encoder, decoder, searcher, voc):
             output_words = evaluate(encoder, decoder, searcher, voc, input_sentence)
             # Format and print response sentence
             output_words[:] = [x for x in output_words if not (x == 'EOS' or x == 'PAD')]
-            print('Bot:', ' '.join(output_words))
+            print('Bot:', ''.join(output_words))
 
         except KeyError:
             print("Error: Encountered unknown word.")

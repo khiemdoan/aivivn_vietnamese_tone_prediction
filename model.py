@@ -32,7 +32,7 @@ class EncoderRNN(nn.Module):
         embedded = self.embedding(input_seq)
         # Pack padded batch of sequences for RNN module. Padding zero when length less than max_length of input_lengths.
         # shape: (max_length , batch_size , hidden_size)
-        packed = nn.utils.rnn.pack_padded_sequence(embedded, input_lengths)
+        packed = nn.utils.rnn.pack_padded_sequence(embedded, input_lengths, enforce_sorted=False)
         # Step 2: Forward packed through GRU
         # outputs is output of final GRU layer
         # hidden is concatenate of all hidden states corresponding with each time step.

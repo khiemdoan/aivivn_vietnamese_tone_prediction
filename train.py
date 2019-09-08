@@ -46,10 +46,10 @@ save_every = 1000
 
 with ZipFile('data/vietnamese_tone_prediction.zip', 'r') as inzip:
     train = inzip.read('train.txt').decode('utf-8').split('\n')
-    train = train[:500_000]
+    train = train[:100]
 
 print('length of train: {}'.format(len(train)))
-train[:5]
+print(train[:5])
 
 remove_vietnamese_tone('Đi một ngày đàng học 1 sàng khôn')
 
@@ -132,8 +132,12 @@ def loadPrepareData(voc, pairs):
     print("Trimmed to {!s} sentence pairs".format(len(pairs)))
     print("Counting words...")
     for pair in pairs:
-        voc.addSentence(pair[0])
-        voc.addSentence(pair[1])
+        for c in pair[0]:
+            voc.addWord(c)
+        for c in pair[1]:
+            voc.addWord(c)
+        # voc.addSentence(pair[0])
+        # voc.addSentence(pair[1])
     print("Counted words:", voc.num_words)
     return voc, pairs
 
@@ -161,12 +165,14 @@ def trimRareWords(voc, pairs, MIN_COUNT):
         keep_input = True
         keep_output = True
         # Check input sentence
-        for word in input_sentence.split(' '):
+        # for word in input_sentence.split(' '):
+        for word in input_sentence:
             if word not in voc.word2index:
                 keep_input = False
                 break
         # Check output sentence
-        for word in output_sentence.split(' '):
+        # for word in output_sentence.split(' '):
+        for word in output_sentence:
             if word not in voc.word2index:
                 keep_output = False
                 break
@@ -180,7 +186,7 @@ def trimRareWords(voc, pairs, MIN_COUNT):
 
 
 # Trim voc and pairs
-pairs = trimRareWords(voc, pairs, MIN_COUNT)
+# pairs = trimRareWords(voc, pairs, MIN_COUNT)
 
 
 print('EOS_token: ', EOS_token)
@@ -189,11 +195,13 @@ print('PAD_token: ', PAD_token)
 
 
 def indexesFromSentence(voc, sentence):
-    return [voc.word2index[word] for word in sentence.split(' ')] + [EOS_token]
+    return [voc.word2index[word] for word in sentence] + [EOS_token]
 
 
 # Padding thêm 0 vào list nào có độ dài nhỏ hơn về phía bên phải
 def zeroPadding(l, fillvalue=PAD_token):
+    # max_length = len(max(l, key=len))
+    # return [item + [fillvalue] * (max_length - len(item)) for item in l]
     return list(itertools.zip_longest(*l, fillvalue=fillvalue))
 
 
@@ -219,7 +227,7 @@ def inputVar(l, voc):
     indexes_batch = [indexesFromSentence(voc, sentence) for sentence in l]
     lengths = torch.tensor([len(indexes) for indexes in indexes_batch])
     padList = zeroPadding(indexes_batch)
-#     padList = transpose(padList)
+    # padList = transpose(padList)
     padVar = torch.LongTensor(padList)
     return padVar, lengths
 
@@ -229,7 +237,7 @@ def outputVar(l, voc):
     indexes_batch = [indexesFromSentence(voc, sentence) for sentence in l]
     max_target_len = max([len(indexes) for indexes in indexes_batch])
     padList = zeroPadding(indexes_batch)
-#     padList = transpose(padList)
+    # padList = transpose(padList)
     mask = binaryMatrix(padList)
     mask = torch.ByteTensor(mask)
     padVar = torch.LongTensor(padList)
