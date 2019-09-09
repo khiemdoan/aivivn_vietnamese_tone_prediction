@@ -68,53 +68,42 @@ from utils import device
 #         return self.indexes2sentence(indexes)
 
 # Default word tokens
-PAD_token = 0  # Used for padding short sentences
-SOS_token = 1  # Start-of-sentence token
-EOS_token = 2  # End-of-sentence token
+PAD_token = '<PAD>'         # Used for padding short sentences
+SOS_token = '<SOS>'         # Start-of-sentence token
+EOS_token = '<EOS>'         # End-of-sentence token
+UNK_token = '<UNKNOWN>'     # Unknown token
 
 
-class Voc:
+class Vocab:
+
     def __init__(self):
-        self.trimmed = False
-        self.word2index = {}
-        self.word2count = {}
-        self.index2word = {PAD_token: "PAD", SOS_token: "SOS", EOS_token: "EOS"}
-        self.num_words = 3  # Count SOS, EOS, PAD
+        self._char2index: Dict[str, int] = {}
+        self._index2char: Dict[int, str] = {}
 
-    def addSentence(self, sentence):
-        for word in sentence.split(' '):
-            self.addWord(word)
+        self.add_char(PAD_token)
+        self.add_char(SOS_token)
+        self.add_char(EOS_token)
+        self.add_char(UNK_token)
 
-    def addWord(self, word):
-        if word not in self.word2index:
-            self.word2index[word] = self.num_words
-            self.word2count[word] = 1
-            self.index2word[self.num_words] = word
-            self.num_words += 1
-        else:
-            self.word2count[word] += 1
+    def add_sentence(self, sentence: str) -> NoReturn:
+        for char in sentence:
+            self.add_char(char)
 
-    # Remove words below a certain count threshold
-    def trim(self, min_count):
-        if self.trimmed:
-            return
-        self.trimmed = True
+    def add_char(self, char: str) -> NoReturn:
+        if char not in self._char2index:
+            next_index = self.num_words
+            self._char2index[char] = next_index
+            self._index2char[next_index] = char
 
-        keep_words = []
+    @property
+    def num_words(self) -> int:
+        return len(self._char2index)
 
-        for k, v in self.word2count.items():
-            if v >= min_count:
-                keep_words.append(k)
+    def char2index(self, char: str) -> int:
+        return self._char2index.get(char, self._char2index[UNK_token])
 
-        print('keep_words {} / {} = {:.4f}'.format(
-            len(keep_words), len(self.word2index), len(keep_words) / len(self.word2index)
-        ))
+    def index2char(self, index: int) -> str:
+        return self._index2char.get(index, UNK_token)
 
-        # Reinitialize dictionaries
-        self.word2index = {}
-        self.word2count = {}
-        self.index2word = {PAD_token: "PAD", SOS_token: "SOS", EOS_token: "EOS"}
-        self.num_words = 3  # Count default tokens
-
-        for word in keep_words:
-            self.addWord(word)
+    def sentence2indexes(self, sentence):
+        return [self.char2index(char) for char in sentence] + [self.char2index(EOS_token)]

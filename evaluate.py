@@ -3,11 +3,11 @@ import re
 import torch
 from torch import nn, optim
 
-from lang import EOS_token, PAD_token, SOS_token, Voc
 from model import EncoderRNN, GreedySearchDecoder, LuongAttnDecoderRNN
 from utils import device
+from vocab import EOS_token, PAD_token, SOS_token, UNK_token, Vocab
 
-voc = Voc()
+voc = Vocab()
 
 attn_model = 'dot'
 # attn_model = 'general'
@@ -21,7 +21,7 @@ learning_rate = 0.0001
 decoder_learning_ratio = 5.0
 
 loadFilename = 'models/checkpoint.tar'
-checkpoint = torch.load(loadFilename)
+checkpoint = torch.load(loadFilename, map_location=device)
 
 voc.__dict__ = checkpoint['voc_dict']
 
@@ -48,55 +48,49 @@ decoder = decoder.to(device)
 encoder.eval()
 decoder.eval()
 
-MAX_LENGTH = 4
-
 # Initialize search module
 searcher = GreedySearchDecoder(encoder, decoder)
 
-# Lowercase, trim, and remove non-letter characters
-def normalizeString(s):
-    # Tách dấu câu nếu kí tự liền nhau
-    s = re.sub(r"([.!?,\-\&\(\)\[\]])", r" \1 ", s)
-    # Thay thế nhiều spaces bằng 1 space.
-    s = re.sub(r"\s+", r" ", s).strip()
-    return s
 
-
-def indexesFromSentence(voc, sentence):
-    return [voc.word2index[word] for word in sentence] + [EOS_token]
-
-
-def evaluate(encoder, decoder, searcher, voc, sentence, max_length=MAX_LENGTH):
+def evaluate(searcher, voc, sentence):
     ### Format input sentence as a batch
     # words -> indexes
-    indexes_batch = [indexesFromSentence(voc, sentence)]
+    uppercase_map = [c.isupper() for c in sentence]
+    sentence = sentence.lower()
+    indexes_batch = [voc.sentence2indexes(sentence)]
     # Create lengths tensor
     lengths = torch.tensor([len(indexes) for indexes in indexes_batch])
     # Transpose dimensions of batch to match models' expectations
-    input_batch = torch.LongTensor(indexes_batch).transpose(0, 1)
+    input_batch = torch.tensor(indexes_batch, dtype=torch.long).transpose(0, 1)
     # Use appropriate device
     input_batch = input_batch.to(device)
     lengths = lengths.to(device)
     # Decode sentence with searcher
     max_length = len(sentence)
     tokens, scores = searcher(input_batch, lengths, max_length)
-    # indexes -> words
-    decoded_words = [voc.index2word[token.item()] for token in tokens]
+    # indexes ->
+    decoded_words = []
+    for i, token in enumerate(tokens):
+        idx = token.item()
+        if idx == voc.char2index(UNK_token):
+            decoded_words.append(sentence[i])
+        else:
+            decoded_words.append(voc.index2char(idx))
+    for i in range(min(len(uppercase_map), len(decoded_words))):
+        if uppercase_map[i] is True:
+            decoded_words[i] = decoded_words[i].upper()
     return decoded_words
 
 
-def evaluateInput(encoder, decoder, searcher, voc):
-    input_sentence = ''
-    while(1):
+def evaluateInput(searcher, voc):
+    while True:
         try:
             # Get input sentence
             input_sentence = input('> ')
             # Check if it is quit case
             if input_sentence == 'q' or input_sentence == 'quit': break
-            # Normalize sentence
-            input_sentence = normalizeString(input_sentence)
             # Evaluate sentence
-            output_words = evaluate(encoder, decoder, searcher, voc, input_sentence)
+            output_words = evaluate(searcher, voc, input_sentence)
             # Format and print response sentence
             output_words[:] = [x for x in output_words if not (x == 'EOS' or x == 'PAD')]
             print('Bot:', ''.join(output_words))
@@ -106,4 +100,4 @@ def evaluateInput(encoder, decoder, searcher, voc):
 
 
 # Begin chatting (uncomment and run the following lin
-evaluateInput(encoder, decoder, searcher, voc)
+evaluateInput(searcher, voc)

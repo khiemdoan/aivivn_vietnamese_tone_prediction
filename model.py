@@ -5,8 +5,8 @@ from torch import nn, tensor
 from torch.nn import functional as F
 from torch.utils.data import Dataset
 
-from lang import SOS_token
 from utils import device
+from vocab import SOS_token
 
 
 class EncoderRNN(nn.Module):
@@ -32,7 +32,7 @@ class EncoderRNN(nn.Module):
         embedded = self.embedding(input_seq)
         # Pack padded batch of sequences for RNN module. Padding zero when length less than max_length of input_lengths.
         # shape: (max_length , batch_size , hidden_size)
-        packed = nn.utils.rnn.pack_padded_sequence(embedded, input_lengths, enforce_sorted=False)
+        packed = nn.utils.rnn.pack_padded_sequence(embedded, input_lengths)
         # Step 2: Forward packed through GRU
         # outputs is output of final GRU layer
         # hidden is concatenate of all hidden states corresponding with each time step.
@@ -178,13 +178,13 @@ class GreedySearchDecoder(nn.Module):
         self.encoder = encoder
         self.decoder = decoder
 
-    def forward(self, input_seq, input_length, max_length):
+    def forward(self, input_seq, input_length, max_length, sos_token=1):
         # Forward input through encoder model
         encoder_outputs, encoder_hidden = self.encoder(input_seq, input_length)
         # Prepare encoder's final hidden layer to be first hidden input to the decoder
         decoder_hidden = encoder_hidden[:self.decoder.n_layers]
         # Initialize decoder input with SOS_token
-        decoder_input = torch.ones(1, 1, device=device, dtype=torch.long) * SOS_token
+        decoder_input = torch.ones(1, 1, device=device, dtype=torch.long) * sos_token
         # Initialize tensors to append decoded words to
         all_tokens = torch.zeros([0], device=device, dtype=torch.long)
         all_scores = torch.zeros([0], device=device)

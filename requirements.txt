@@ -3,3 +3,4 @@ torch
 scikit-learn
 progressbar2
 isort
+nltk
