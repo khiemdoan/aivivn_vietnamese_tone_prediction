@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+
+    <title>Thêm dấu tiếng Việt</title>
+  </head>
+  <body>
+    <div class="container-fluid">
+      <div class="row">
+          <div class="col jumbotron">
+              <h1 class="display-4">Thêm dấu tiếng Việt</h1>
+          </div>
+      </div>
+
+      <div class="row align-items-center">
+        <div class="col-md-5">
+          <div class="form-group">
+            <label for="input-box">Input</label>
+            <textarea class="form-control" rows="10" id="input-box"></textarea>
+          </div>
+        </div>
+
+        <div class="col-md-2">
+          <button class="btn btn-primary btn-lg btn-block" id="process-button">Process</button>
+        </div>
+
+        <div class="col-md-5">
+          <div class="form-group">
+            <label for="output-box">Output</label>
+            <textarea class="form-control" rows="10" id="output-box"></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Optional JavaScript -->
+    <!-- jQuery first, then Popper.js, then Bootstrap JS -->
+    <script src="https://code.jquery.com/jquery-3.4.1.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.15.0/umd/popper.min.js" integrity="sha256-fTuUgtT7O2rqoImwjrhDgbXTKUwyxxujIMRIK7TbuNU=" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
+
+    <script>
+      function fillOutput(data) {
+        let text = data.join("\n");
+        $("#output-box").val(text);
+      }
+
+      function callServer(text) {
+        $.ajax({
+          url: "/process",
+          type: "POST",
+          data: JSON.stringify({"text": text}),
+          contentType: "application/json; charset=utf-8",
+          dataType: "json",
+          success: fillOutput,
+          failure: function(errMsg) {
+            alert(errMsg);
+          }
+        });
+      }
+
+      $(document).ready(function(){
+        $("#process-button").click(function(){
+          let text = $("#input-box").val();
+          callServer(text);
+        });
+      });
+    </script>
+  </body>
+</html>

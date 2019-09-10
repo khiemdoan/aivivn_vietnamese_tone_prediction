@@ -255,7 +255,8 @@ def trainIters(voc, data_loader,
         # Save checkpoint
         save_dir = Path(save_dir)
         save_dir.mkdir(parents=True, exist_ok=True)
-        save_file = save_dir / 'checkpoint.pt'
+        print_loss_avg = print_loss / total_batch
+        save_file = save_dir / f'checkpoint_epoch_{epoch}_loss_{print_loss_avg:.4f}.pt'
         save_content = {
             'epoch': epoch,
             'en': encoder.state_dict(),
@@ -267,7 +268,6 @@ def trainIters(voc, data_loader,
             'embedding': embedding.state_dict()
         }
         torch.save(save_content, save_file)
-        print_loss_avg = print_loss / total_batch
         save_status.update(f'Saved epoch: {epoch}, average loss: {print_loss_avg:.4f}')
 
 # Configure models

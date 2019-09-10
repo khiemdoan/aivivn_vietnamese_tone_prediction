@@ -214,10 +214,6 @@ class GreedySearchDecoder(nn.Module):
 
             # Với các ký tự đầu vào không phải aeiouyd
             # sẽ được giữ nguyên
-            if i == 14:
-                print('hihi')
-                print(self.vocab.index2char(decoder_input.item()))
-                print(self.vocab.index2char(input_seq[i].item()))
             if input_seq[i] not in self._aeiouyd_indexes:
                 decoder_input = input_seq[i]
             else:
@@ -225,7 +221,6 @@ class GreedySearchDecoder(nn.Module):
                 # nhưng output không nằm trong family tương ứng
                 # thì vẫn giữ nguyên
                 family_index = self._aeiouyd_indexes.index(input_seq[i])
-                print(self.vocab.index2char(self._indexes_families[family_index][0]))
                 if decoder_input not in self._indexes_families[family_index]:
                     decoder_input = input_seq[i]
 
