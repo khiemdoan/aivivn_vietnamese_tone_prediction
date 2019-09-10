@@ -44,7 +44,7 @@ tones_u = [
 ]
 
 no_tone_chars_l = 'a'*17 + 'd' + 'e'*11 + 'i'*5 + 'o'*17 + 'u'*11 + 'y'*5
-no_tone_chars_u = 'A'*17 + 'D' + 'E'*11 + 'I'*5 + 'U'*11 + 'O'*17 + 'Y'*5
+no_tone_chars_u = 'A'*17 + 'D' + 'E'*11 + 'I'*5 + 'O'*17 + 'U'*11 + 'Y'*5
 
 
 tones_dict = dict(zip(uni_chars_l + uni_chars_u, tones_l + tones_u))

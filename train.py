@@ -234,9 +234,11 @@ def trainIters(voc, data_loader,
         epoch_status.update(f'Training epoch: {epoch}')
 
         print_loss = 0
-        total_batch = len(data_loader)
+        total_batch = 0
         start_batch_time = time.time()
         for it, pairs in enumerate(data_loader, 1):
+            if len(pairs[0]) != batch_size:
+                continue
             training_batch = batch2TrainData(voc, list(zip(*pairs)))
             # Extract fields from batch
             input_variable, lengths, target_variable, mask, max_target_len = training_batch
@@ -244,10 +246,11 @@ def trainIters(voc, data_loader,
             # Run a training iteration with batch
             loss = train(input_variable, lengths, target_variable, mask, max_target_len, encoder,
                          decoder, encoder_optimizer, decoder_optimizer, batch_size, clip)
-            s, es, rs = time_since(start_batch_time, it / total_batch)
-            batch_status.update(f'Batch: {it}/{total_batch}, loss: {loss:.4f},'
-                                f' {as_minutes(s)}/{as_minutes(es)}, remain {as_minutes(rs)}')
+            s, es, rs = time_since(start_batch_time, it / len(data_loader))
+            batch_status.update(f'Batch: {it}/{len(data_loader)}, loss: {loss:.4f},'
+                                f' {as_minutes(s)}/{as_minutes(es)}, remain {as_minutes(rs)}, {as_minutes(s / it)}/it')
             print_loss += loss
+            total_batch += 1
 
         # Save checkpoint
         save_dir = Path(save_dir)
@@ -275,7 +278,7 @@ hidden_size = 500
 encoder_n_layers = 2
 decoder_n_layers = 2
 dropout = 0.1
-batch_size = 100
+batch_size = 15
 total_epoch = 10
 
 # Configure training/optimization

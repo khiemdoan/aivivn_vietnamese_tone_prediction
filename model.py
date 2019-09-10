@@ -6,7 +6,8 @@ from torch.nn import functional as F
 from torch.utils.data import Dataset
 
 from utils import device
-from vocab import SOS_token
+from vietnamese_utils import A_FAMILY, D_FAMILY, E_FAMILY, I_FAMILY, O_FAMILY, U_FAMILY, Y_FAMILY
+from vocab import Vocab
 
 
 class EncoderRNN(nn.Module):
@@ -173,10 +174,26 @@ class LuongAttnDecoderRNN(nn.Module):
 
 
 class GreedySearchDecoder(nn.Module):
-    def __init__(self, encoder, decoder):
+
+    def __init__(self, encoder: EncoderRNN, decoder: LuongAttnDecoderRNN, vocab: Vocab):
         super().__init__()
+        self.vocab = vocab
+
         self.encoder = encoder
         self.decoder = decoder
+
+        # prepare vietnamese families
+        a_indexes_family = [vocab.char2index(x) for x in A_FAMILY]
+        d_indexes_family = [vocab.char2index(x) for x in D_FAMILY]
+        e_indexes_family = [vocab.char2index(x) for x in E_FAMILY]
+        i_indexes_family = [vocab.char2index(x) for x in I_FAMILY]
+        o_indexes_family = [vocab.char2index(x) for x in O_FAMILY]
+        u_indexes_family = [vocab.char2index(x) for x in U_FAMILY]
+        y_indexes_family = [vocab.char2index(x) for x in Y_FAMILY]
+
+        self._indexes_families = [a_indexes_family, d_indexes_family, e_indexes_family,
+                                  i_indexes_family, o_indexes_family, u_indexes_family, y_indexes_family]
+        self._aeiouyd_indexes = [indexes[0] for indexes in self._indexes_families]
 
     def forward(self, input_seq, input_length, max_length, sos_token=1):
         # Forward input through encoder model
@@ -189,11 +206,29 @@ class GreedySearchDecoder(nn.Module):
         all_tokens = torch.zeros([0], device=device, dtype=torch.long)
         all_scores = torch.zeros([0], device=device)
         # Iteratively decode one word token at a time
-        for _ in range(max_length):
+        for i in range(max_length):
             # Forward pass through decoder
             decoder_output, decoder_hidden = self.decoder(decoder_input, decoder_hidden, encoder_outputs)
             # Obtain most likely word token and its softmax score
             decoder_scores, decoder_input = torch.max(decoder_output, dim=1)
+
+            # Với các ký tự đầu vào không phải aeiouyd
+            # sẽ được giữ nguyên
+            if i == 14:
+                print('hihi')
+                print(self.vocab.index2char(decoder_input.item()))
+                print(self.vocab.index2char(input_seq[i].item()))
+            if input_seq[i] not in self._aeiouyd_indexes:
+                decoder_input = input_seq[i]
+            else:
+                # Với các ký tự đầu vào là aeiouyd
+                # nhưng output không nằm trong family tương ứng
+                # thì vẫn giữ nguyên
+                family_index = self._aeiouyd_indexes.index(input_seq[i])
+                print(self.vocab.index2char(self._indexes_families[family_index][0]))
+                if decoder_input not in self._indexes_families[family_index]:
+                    decoder_input = input_seq[i]
+
             # Record token and score
             all_tokens = torch.cat((all_tokens, decoder_input), dim=0)
             all_scores = torch.cat((all_scores, decoder_scores), dim=0)
