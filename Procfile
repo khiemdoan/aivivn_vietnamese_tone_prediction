@@ -1,1 +1,2 @@
-web: python web_service.py --port=$PORT
+web: gunicorn web_service:app
+
