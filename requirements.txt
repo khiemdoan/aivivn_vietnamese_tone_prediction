@@ -1,7 +1,7 @@
 jupyter
 torch
-scikit-learn
 progressbar2
 isort
 nltk
 flask
+gunicorn

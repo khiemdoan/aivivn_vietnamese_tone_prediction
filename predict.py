@@ -11,7 +11,8 @@ NGRAM = 4
 attn_model = 'dot'
 # attn_model = 'general'
 # attn_model = 'concat'
-hidden_size = 500
+embedding_dim = 64
+hidden_size = 512
 encoder_n_layers = 2
 decoder_n_layers = 2
 dropout = 0.1
@@ -26,7 +27,7 @@ checkpoint = torch.load(loadFilename, map_location=device)
 voc = Vocab()
 voc.__dict__ = checkpoint['voc_dict']
 
-embedding = nn.Embedding(voc.num_words, hidden_size)
+embedding = nn.Embedding(voc.num_words, embedding_dim)
 embedding.load_state_dict(checkpoint['embedding'])
 
 encoder = EncoderRNN(hidden_size, embedding, encoder_n_layers, dropout)

@@ -20,7 +20,7 @@ class EncoderRNN(nn.Module):
         # Initialize GRU; the input_size and hidden_size params are both set to 'hidden_size'
         # set bidirectional = True for bidirectional
         # https://pytorch.org/docs/stable/nn.html?highlight=gru#torch.nn.GRU to get more information
-        self.gru = nn.GRU(input_size=hidden_size,  # number of expected feature of input x
+        self.gru = nn.GRU(input_size=embedding.embedding_dim,  # number of expected feature of input x
                           hidden_size=hidden_size,  # number of expected feature of hidden state
                           num_layers=n_layers,  # number of GRU layers
                           dropout=(0 if n_layers == 1 else dropout),  # dropout probability apply in encoder network
@@ -120,7 +120,7 @@ class LuongAttnDecoderRNN(nn.Module):
         # Define layers
         self.embedding = embedding
         self.embedding_dropout = nn.Dropout(dropout)
-        self.gru = nn.GRU(hidden_size, hidden_size, n_layers, dropout=(0 if n_layers == 1 else dropout))
+        self.gru = nn.GRU(embedding.embedding_dim, hidden_size, n_layers, dropout=(0 if n_layers == 1 else dropout))
         self.concat = nn.Linear(hidden_size * 2, hidden_size)
         self.out = nn.Linear(hidden_size, output_size)
 
